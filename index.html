@@ -75,32 +75,50 @@
   <script>
     var socket = io();
 
-var messages = document.getElementById('messages');
-var form = document.getElementById('form');
-var input = document.getElementById('input');
-var joinRoomButton = document.getElementById('join-room');
-var leaveRoomButton = document.getElementById('leave-room');
-var currentRoom = null;
+    var messages = document.getElementById('messages');
+    var form = document.getElementById('form');
+    var input = document.getElementById('input');
+    var joinRoomButton = document.getElementById('join-room');
+    var leaveRoomButton = document.getElementById('leave-room');
+    var currentRoom = null;
 
-form.addEventListener('submit', function (e) {
-  e.preventDefault();
-  if (input.value) {
-    socket.emit('chat message', input.value);
-    input.value = '';
-  }
-});
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (input.value) {
+        socket.emit('chat message', input.value);
+        input.value = '';
+      }
+    });
 
-// Add the following code to prompt the user to enter a username
-var username = prompt('Enter your username:');
-socket.emit('set username', username);
+    joinRoomButton.addEventListener('click', function() {
+        var room = prompt('Enter room name:');
+        if (room) {
+          if (currentRoom) {
+            socket.emit('leave room', currentRoom);
+          }
+          socket.emit('join room', room);
+          currentRoom = room;
+        }
+      });
+
+      leaveRoomButton.addEventListener('click', function() {
+        if (currentRoom) {
+          socket.emit('leave room', currentRoom);
+          currentRoom = null;
+        }
+      });
 
 
-socket.on('chat message', function (msg) {
-  var item = document.createElement('li');
-  item.textContent = msg;
-  messages.appendChild(item);
-  window.scrollTo(0, document.body.scrollHeight);
-});
+    // Add the following code to prompt the user to enter a username
+    var username = prompt('Enter your username:');
+    socket.emit('set username', username);
+
+    socket.on('chat message', function (msg) {
+      var item = document.createElement('li');
+      item.textContent = msg;
+      messages.appendChild(item);
+      window.scrollTo(0, document.body.scrollHeight);
+    });
   </script>
 </body>
 

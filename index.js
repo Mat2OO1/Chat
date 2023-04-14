@@ -8,31 +8,33 @@ app.get('/', (req, res) => {
 });
 
 io.on('connection', (socket) => {
-  
-  socket.on('set username', (data) => {
-    socket.username = data;
-    console.log("works!")
-    socket.join('default')
+  let room;
+
+  socket.on('set username', (username) => {
+    socket.username = username
+    io.emit('chat message', `${socket.username} joined the chat `)
+  });
+
+  socket.on('join room', (joinedRoom) => {
+    socket.join(joinedRoom);
+    room = joinedRoom;
+    io.to(room).emit('chat message', `${socket.username} joined the room`);
   });
 
   socket.on('chat message', (msg) => {
-    io.emit('chat message', `${socket.username}: ${msg}`);
+    io.to(room).emit('chat message', `${socket.username}: ${msg}`);
+  });
+
+  socket.on('leave room', () => {
+    io.to(room).emit('chat message', `${socket.username} left the room`);
+    socket.leave(room);
   });
 
   socket.on('disconnect', () => {
-    socket.to('default').emit('chat message', `${username} has left the room`);
-  });
-
-  socket.on('join room', (room) => {
-    socket.join(room);
-    io.emit('chat message', `${socket.username} has joined room ${room}`);
-  });
-
-  socket.on('leave room', (room) => {
-    socket.leave(room);
-    io.emit('chat message', `${socket.username} has left room ${room}`);
+    io.to(room).emit('chat message', `${socket.username} left the room`);
   });
 });
+
 
 
 
