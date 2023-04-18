@@ -73,6 +73,8 @@
 
         li {
             margin-top: 10px;
+            margin-left: 20px;
+            margin-right: 20px;
         }
 
         .user_message {
@@ -85,6 +87,7 @@
 <ul id="messages"></ul>
 <form id="form" action="">
     <input id="input" autocomplete="off"/>
+    <input id="picture" type="file" id="myFile" name="filename">
     <button>Send</button>
 </form>
 <div class="room-buttons">
@@ -98,6 +101,7 @@
     var messages = document.getElementById('messages');
     var form = document.getElementById('form');
     var input = document.getElementById('input');
+    var picture = document.getElementById('picture');
     var joinRoomButton = document.getElementById('join-room');
     var leaveRoomButton = document.getElementById('leave-room');
     var currentRoom = null;
@@ -106,8 +110,17 @@
     form.addEventListener('submit', function (e) {
         e.preventDefault();
         if (input.value) {
-            socket.emit('user message', input.value);
+            socket.emit('user message', input.value, false);
             input.value = '';
+        }
+        if (picture.value) {
+            const reader = new FileReader();
+            reader.readAsDataURL(picture.files[0]);
+            reader.addEventListener('load', () => {
+                const base64DataUrl = reader.result;
+                socket.emit('user message', false, base64DataUrl);
+            });
+            picture.value = ''
         }
     });
 
@@ -144,15 +157,30 @@
         window.scrollTo(0, document.body.scrollHeight);
     });
 
-    socket.on('user message', function (msg, username, date) {
+    socket.on('user message', function (msg, imageData, username, date) {
         var item = document.createElement('li');
         var usernameItem = document.createElement('div');
         var messageItem = document.createElement('div');
         var dateItem = document.createElement('div');
+
+        if (msg) {
+            messageItem.textContent = msg;
+        }
+        if (imageData) {
+            scaleImageToSquare(imageData)
+                .then((image) => {
+                    messageItem.appendChild(image)
+                })
+                .catch((error) => {
+                    console.error(error);
+                });
+
+        }
+
+        messageItem.classList.add("message");
         usernameItem.textContent = username;
         usernameItem.classList.add("username");
-        messageItem.textContent = msg;
-        messageItem.classList.add("message");
+
         dateItem.textContent = date;
         dateItem.classList.add("time");
         item.appendChild(usernameItem);
@@ -169,19 +197,19 @@
     var typing = false;
     var timeout = undefined;
 
-    input.addEventListener('input', function() {
+    input.addEventListener('input', function () {
         clearTimeout(timeout);
         if (!typing) {
             typing = true;
             socket.emit('typing', true);
         }
-        timeout = setTimeout(function() {
+        timeout = setTimeout(function () {
             typing = false;
             socket.emit('typing', false);
         }, 1000);
     });
 
-    socket.on('typing', function(typingUser) {
+    socket.on('typing', function (typingUser) {
         var typingMessage = document.getElementById('typing-message');
 
         if (typingMessage === null && typingUser !== currentUser) {
@@ -199,6 +227,46 @@
             typingMessage.remove();
         }
     });
+
+    function scaleImageToSquare(dataUrl) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement("canvas");
+                const ctx = canvas.getContext("2d");
+                const maxSize = 256;
+
+                if (img.width > maxSize || img.height > maxSize) {
+                    const scale = Math.min(maxSize / img.width, maxSize / img.height);
+                    canvas.width = img.width * scale;
+                    canvas.height = img.height * scale;
+                } else {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                }
+
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                const scaledImg = new Image();
+                scaledImg.onload = () => {
+                    resolve(scaledImg);
+                };
+
+                scaledImg.onerror = (error) => {
+                    reject(error);
+                };
+
+                scaledImg.src = canvas.toDataURL("image/png");
+            };
+
+            img.onerror = (error) => {
+                reject(error);
+            };
+
+            img.src = dataUrl;
+        });
+    }
+
 
 </script>
 </body>

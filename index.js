@@ -21,8 +21,13 @@ io.on('connection', (socket) => {
         io.to(room).emit('chat message', `${socket.username} joined the room ` + room);
     });
 
-    socket.on('user message', (msg) => {
-        io.to(room).emit('user message', `${msg}`, `${socket.username}`, new Date().getHours() + ':' + new Date().getMinutes());
+    socket.on('user message', (msg, img) => {
+        if (msg) {
+            io.to(room).emit('user message', msg, false,`${socket.username}`, new Date().getHours() + ':' + new Date().getMinutes());
+        }
+        if (img) {
+            io.to(room).emit('user message', false, img, `${socket.username}`, new Date().getHours() + ':' + new Date().getMinutes());
+        }
     });
 
     socket.on('leave room', () => {
